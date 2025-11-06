@@ -62,17 +62,16 @@ public class KasusDAO {
 
     // ✅ UPDATE
     public boolean updateKasus(Kasus kasus) {
-        String sql = "UPDATE kasus SET id_kasus = ?, nama_kasus = ?, penyidik = ?, klasifikasi_kasus = ?, status_kasus = ? WHERE id_kasus = ?";
+        String sql = "UPDATE kasus SET nama_kasus = ?, penyidik = ?, klasifikasi_kasus = ?, status_kasus = ? WHERE id_kasus = ?";
 
         try (Connection conn = koneksi.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
-            pstmt.setString(1, kasus.getid_kasus());
-            pstmt.setString(2, kasus.getnama_kasus());
-            pstmt.setString(3, kasus.getPenyidik());
-            pstmt.setString(4, kasus.getklasifikasi_kasus());
-            pstmt.setString(5, kasus.getstatus_kasus().getDisplayName());
-            pstmt.setString(6, kasus.getid_kasus()); // WHERE condition
+            pstmt.setString(1, kasus.getnama_kasus());
+            pstmt.setString(2, kasus.getPenyidik());
+            pstmt.setString(3, kasus.getklasifikasi_kasus());
+            pstmt.setString(4, kasus.getstatus_kasus().getDisplayName());
+            pstmt.setString(5, kasus.getid_kasus()); // WHERE condition
 
             return pstmt.executeUpdate() > 0;
 
@@ -161,6 +160,44 @@ public class KasusDAO {
         return kasus;
     }
 
+    // METHOD BARU: Untuk generate ID berikutnya
+    public String getNextKasusId() {
+        String lastId = getLastKasusId();
+        
+        if (lastId == null) {
+            return "KAS001"; // ID pertama
+        }
+        
+        try {
+            // Extract angka dari ID terakhir (contoh: "KAS003" -> 3)
+            int lastNumber = Integer.parseInt(lastId.substring(3));
+            int nextNumber = lastNumber + 1;
+            return String.format("KAS%03d", nextNumber); // Format: KAS004, KAS005, dst
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "KAS001"; // Fallback
+        }
+    }
+
+    // Method untuk mendapatkan ID terakhir
+    public String getLastKasusId() {
+        String lastId = null;
+        String query = "SELECT id_kasus FROM kasus ORDER BY id_kasus DESC LIMIT 1";
+        
+        try (Connection conn = koneksi.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(query);
+             ResultSet rs = stmt.executeQuery()) {
+            
+            if (rs.next()) {
+                lastId = rs.getString("id_kasus");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        
+        return lastId;
+    }
+
     // HELPER METHOD: Konversi String ke Enum
     private Kasus.status_kasus convertToStatusEnum(String statusStr) {
         if (statusStr == null) return Kasus.status_kasus.AKTIF;
@@ -173,23 +210,4 @@ public class KasusDAO {
             default: return Kasus.status_kasus.AKTIF;
         }
     }
-    // Method untuk generate ID Kasus otomatis
-public String getLastKasusId() {
-    String lastId = null;
-    String query = "SELECT id_kasus FROM kasus ORDER BY id_kasus DESC LIMIT 1";
-    
-    try (Connection conn = koneksi.getConnection();
-         PreparedStatement stmt = conn.prepareStatement(query);
-         ResultSet rs = stmt.executeQuery()) {
-        
-        if (rs.next()) {
-            lastId = rs.getString("id_kasus");
-        }
-    } catch (SQLException e) {
-        e.printStackTrace();
-    }
-    
-    return lastId;
 }
-}
-

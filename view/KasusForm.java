@@ -1,6 +1,7 @@
 package view;
 
 import model.Kasus;
+import dao.KasusDAO; // IMPORT DAO
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
@@ -11,27 +12,30 @@ public class KasusForm extends JDialog {
     private JButton btnSimpan, btnBatal;
     private boolean saved = false;
     private Kasus kasus;
+    private boolean isEditMode;
+    private String originalId; // Untuk menyimpan ID asli saat edit
     
+    // Constructor untuk mode ADD
     public KasusForm(Frame parent, String title) {
-    super(parent, title, true);
-    this.kasus = new Kasus();
-
-   
-
-    initComponents();
-    
-    
-    txtIdKasus.setEditable(false); // Biar gak bisa diedit
-    
-    setSize(400, 300);
-    setLocationRelativeTo(parent);
-}
-    
-    public KasusForm(Frame parent, String title, Kasus kasus) {
         super(parent, title, true);
-        this.kasus = kasus;
+        this.kasus = new Kasus();
+        this.isEditMode = false;
+        
         initComponents();
-        fillFormData();
+        setupFormMode();
+        setSize(400, 300);
+        setLocationRelativeTo(parent);
+    }
+    
+    // Constructor untuk mode EDIT
+    public KasusForm(Frame parent, String title, Kasus kasusToEdit) {
+        super(parent, title, true);
+        this.kasus = kasusToEdit;
+        this.isEditMode = true;
+        this.originalId = kasusToEdit.getid_kasus(); // Simpan ID asli
+        
+        initComponents();
+        setupFormMode();
         setSize(400, 300);
         setLocationRelativeTo(parent);
     }
@@ -115,47 +119,126 @@ public class KasusForm extends JDialog {
         getRootPane().setDefaultButton(btnSimpan);
     }
     
+    // METHOD BARU: Setup mode form (tambah/edit)
+    private void setupFormMode() {
+        if (isEditMode) {
+            // MODE EDIT - Isi data yang akan diedit
+            setupEditMode();
+        } else {
+            // MODE TAMBAH - Generate ID baru
+            setupAddMode();
+        }
+    }
+    
+    // METHOD BARU: Setup mode tambah
+    private void setupAddMode() {
+        // Generate ID otomatis untuk tambah data
+        generateAutoId();
+        txtIdKasus.setEditable(false);
+        
+        // Set judul window
+        setTitle("Tambah Kasus Baru");
+        
+        // Clear fields lainnya
+        clearFormFields();
+    }
+    
+    // METHOD BARU: Setup mode edit
+    private void setupEditMode() {
+        // Isi form dengan data yang akan diedit
+        fillFormData();
+        txtIdKasus.setEditable(false); // ID tidak bisa diubah saat edit
+        
+        // Set judul window
+        setTitle("Edit Kasus - " + originalId);
+    }
+    
+    // METHOD BARU: Generate ID otomatis
+    private void generateAutoId() {
+        if (!isEditMode) { // Hanya generate jika mode tambah
+            try {
+                KasusDAO kasusDAO = new KasusDAO();
+                String nextId = kasusDAO.getNextKasusId(); // AMBIL DARI DAO
+                txtIdKasus.setText(nextId);
+                kasus.setid_kasus(nextId);
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(this, "Error generating ID: " + e.getMessage());
+                // Fallback
+                txtIdKasus.setText("KAS001");
+                kasus.setid_kasus("KAS001");
+            }
+        }
+    }
+    
+    // METHOD BARU: Clear form fields
+    private void clearFormFields() {
+        txtNamaKasus.setText("");
+        txtPenyidik.setText("");
+        txtKlasifikasi.setText("");
+        comboStatus.setSelectedIndex(0);
+        // ID tidak di-clear karena sudah di-generate
+    }
+    
     private void fillFormData() {
         txtIdKasus.setText(kasus.getid_kasus());
         txtNamaKasus.setText(kasus.getnama_kasus());
         txtPenyidik.setText(kasus.getPenyidik());
         txtKlasifikasi.setText(kasus.getklasifikasi_kasus());
-        comboStatus.setSelectedItem(kasus.getstatus_kasus());
+        
+        // Convert enum status to string for combobox
+        String statusString = convertStatusToString(kasus.getstatus_kasus());
+        comboStatus.setSelectedItem(statusString);
+    }
+    
+    // METHOD BARU: Convert enum status to string
+    private String convertStatusToString(Kasus.status_kasus status) {
+        switch (status) {
+            case AKTIF: return "Aktif";
+            case DITUTUP: return "Ditutup";
+            case DALAM_PENYELIDIKAN: return "Dalam Penyelidikan";
+            case SELESAI: return "Selesai";
+            default: return "Aktif";
+        }
     }
     
     private void saveKasus() {
-    if (txtIdKasus.getText().trim().isEmpty() || 
-        txtNamaKasus.getText().trim().isEmpty() ||
-        txtPenyidik.getText().trim().isEmpty()) {
-        JOptionPane.showMessageDialog(this, 
-            "ID Kasus, Nama Kasus, dan Penyidik harus diisi!", 
-            "Error", JOptionPane.ERROR_MESSAGE);
-        return;
+        if (txtIdKasus.getText().trim().isEmpty() || 
+            txtNamaKasus.getText().trim().isEmpty() ||
+            txtPenyidik.getText().trim().isEmpty()) {
+            JOptionPane.showMessageDialog(this, 
+                "ID Kasus, Nama Kasus, dan Penyidik harus diisi!", 
+                "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        
+        // Untuk mode edit, pastikan ID tetap menggunakan original
+        if (isEditMode) {
+            kasus.setid_kasus(originalId);
+        } else {
+            kasus.setid_kasus(txtIdKasus.getText().trim());
+        }
+        
+        kasus.setnama_kasus(txtNamaKasus.getText().trim());
+        kasus.setPenyidik(txtPenyidik.getText().trim());
+        kasus.setklasifikasi_kasus(txtKlasifikasi.getText().trim());
+        
+        // Set status kasus
+        String selectedStatus = comboStatus.getSelectedItem().toString();
+        kasus.setStatus_kasus(convertStringToStatus(selectedStatus));
+        
+        saved = true;
+        dispose();
     }
     
-    kasus.setid_kasus(txtIdKasus.getText().trim());
-    kasus.setnama_kasus(txtNamaKasus.getText().trim());
-    kasus.setPenyidik(txtPenyidik.getText().trim());
-    kasus.setklasifikasi_kasus(txtKlasifikasi.getText().trim());
-    
-    // PERBAIKAN: Set status kasus yang benar
-    String selectedStatus = comboStatus.getSelectedItem().toString();
-    kasus.setStatus_kasus(convertStringToStatus(selectedStatus));
-    
-    saved = true;
-    dispose();
-}
-
-// Tambahkan method konversi
-private Kasus.status_kasus convertStringToStatus(String statusStr) {
-    switch (statusStr) {
-        case "Aktif": return Kasus.status_kasus.AKTIF;
-        case "Ditutup": return Kasus.status_kasus.DITUTUP;
-        case "Dalam Penyelidikan": return Kasus.status_kasus.DALAM_PENYELIDIKAN;
-        case "Selesai": return Kasus.status_kasus.SELESAI;
-        default: return Kasus.status_kasus.AKTIF;
+    private Kasus.status_kasus convertStringToStatus(String statusStr) {
+        switch (statusStr) {
+            case "Aktif": return Kasus.status_kasus.AKTIF;
+            case "Ditutup": return Kasus.status_kasus.DITUTUP;
+            case "Dalam Penyelidikan": return Kasus.status_kasus.DALAM_PENYELIDIKAN;
+            case "Selesai": return Kasus.status_kasus.SELESAI;
+            default: return Kasus.status_kasus.AKTIF;
+        }
     }
-}
     
     public boolean isSaved() {
         return saved;
@@ -163,5 +246,10 @@ private Kasus.status_kasus convertStringToStatus(String statusStr) {
     
     public Kasus getKasus() {
         return kasus;
+    }
+    
+    // METHOD BARU: Untuk mengetahui mode form
+    public boolean isEditMode() {
+        return isEditMode;
     }
 }
