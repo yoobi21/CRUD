@@ -27,7 +27,7 @@ public class menuView extends JFrame {
         this.username = username;
         this.kasusDAO = new KasusDAO();
         
-        setTitle("Case Management System");
+        setTitle("Sistem Kelola Kasus");
         setSize(1300, 700);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
@@ -78,7 +78,7 @@ public class menuView extends JFrame {
         headerPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 20, 0));
 
         // Welcome message
-        welcomeLabel = new JLabel("Welcome Back, " + username + "!");
+        welcomeLabel = new JLabel("Selamat Datang Kembali, " + username + "!");
         welcomeLabel.setFont(new java.awt.Font("Dialog", java.awt.Font.PLAIN, 12));
         welcomeLabel.setForeground(new Color(60, 60, 60));
 
@@ -89,7 +89,7 @@ public class menuView extends JFrame {
         kasusLabel.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
 
         // Logout button
-        btnLogout = new JButton("Logout");
+        btnLogout = new JButton("Keluar");
         btnLogout.setPreferredSize(new Dimension(80, 35));
         btnLogout.setFont(new java.awt.Font("Dialog", java.awt.Font.PLAIN, 12));
         btnLogout.setBackground(new Color(220, 53, 69));
